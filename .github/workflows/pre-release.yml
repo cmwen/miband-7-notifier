@@ -51,7 +51,27 @@ jobs:
         flutter-version: '3.38.7'
         channel: 'stable'
         cache: true
-    
+
+    - name: Install Android NDK
+      run: |
+        if [ -n "$ANDROID_HOME" ] && [ -f "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+          SDK_ROOT="$ANDROID_HOME"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+        elif [ -n "$ANDROID_SDK_ROOT" ] && [ -f "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+          SDK_ROOT="$ANDROID_SDK_ROOT"
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+        else
+          echo "Android SDK cmdline-tools not found" >&2
+          exit 1
+        fi
+
+        yes | "$SDKMANAGER" --licenses >/dev/null || true
+        "$SDKMANAGER" "ndk;28.2.13676358"
+        {
+          echo "ANDROID_NDK_HOME=$SDK_ROOT/ndk/28.2.13676358"
+          echo "ANDROID_NDK_ROOT=$SDK_ROOT/ndk/28.2.13676358"
+        } >> "$GITHUB_ENV"
+     
     # Cache pub dependencies for faster builds
     - name: Cache Flutter packages
       uses: actions/cache@v5
