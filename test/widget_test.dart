@@ -1,84 +1,122 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:miband_7_notifier/main.dart';
+import 'package:miband_7_notifier/models/companion_models.dart';
+import 'package:miband_7_notifier/services/auth_key_extractor_service.dart';
+import 'package:miband_7_notifier/services/ble_companion_service.dart';
+import 'package:miband_7_notifier/services/ble_permission_service.dart';
+import 'package:miband_7_notifier/services/companion_repository.dart';
 import 'package:miband_7_notifier/services/notification_service.dart';
 import 'package:miband_7_notifier/services/storage_service.dart';
 
 void main() {
-  testWidgets('sends a composed notification', (WidgetTester tester) async {
-    final storage = FakeStorageService();
-    final notifications = FakeNotificationService();
-
-    await tester.pumpWidget(
-      MiBandNotifierApp(
-        storageService: storage,
-        notificationService: notifications,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Mi Band 7 Notifier'), findsOneWidget);
-    expect(find.text('Compose notification'), findsOneWidget);
-
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Notification title'),
-      'Tea is ready',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Notification body'),
-      'Meet in the kitchen in 2 minutes.',
-    );
-
-    final sendButton = find.text('Send to phone');
-    await tester.ensureVisible(sendButton);
-    await tester.tap(sendButton);
-    await tester.pumpAndSettle();
-
-    expect(notifications.lastTitle, 'Tea is ready');
-    expect(notifications.lastBody, 'Meet in the kitchen in 2 minutes.');
-    expect(find.text('Tea is ready'), findsWidgets);
-  });
-
-  testWidgets('reuses a recent notification from history', (
+  testWidgets('imports an auth key from pasted output', (
     WidgetTester tester,
   ) async {
-    final storage = FakeStorageService()
-      ..seedStringList('notification_history', [
-        '{"title":"Sprint review","body":"Join the meeting room now.","sentAt":"2026-03-27T02:00:00.000Z"}',
-      ]);
+    final storage = FakeStorageService();
     final notifications = FakeNotificationService();
+    final repository = CompanionRepository(storageService: storage);
 
     await tester.pumpWidget(
       MiBandNotifierApp(
-        storageService: storage,
         notificationService: notifications,
+        companionRepository: repository,
+        authKeyExtractorService: const AuthKeyExtractorService(),
+        blePermissionService: const FakeBlePermissionService(),
+        bleCompanionService: const FakeBleCompanionService(),
       ),
     );
     await tester.pumpAndSettle();
 
-    final historyItem = find.text('Sprint review').last;
-    await tester.ensureVisible(historyItem);
-    await tester.tap(historyItem);
+    expect(find.text('Mi Band 7 Companion'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Auth key workshop'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Paste raw auth output'),
+      'XiaomiFit.device.log authKey = 11223344556677889900AABBCCDDEEFF',
+    );
+    await tester.tap(find.text('Extract auth key candidates'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('0x11223344556677889900aabbccddeeff'), findsOneWidget);
+
+    await tester.tap(find.text('Use this key'));
     await tester.pumpAndSettle();
 
     expect(
-      tester
-          .widget<TextField>(
-            find.widgetWithText(TextField, 'Notification title'),
-          )
-          .controller
-          ?.text,
-      'Sprint review',
+      find.text('Current auth key: 0x11223344556677889900aabbccddeeff'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('sends a relay smoke test notification', (
+    WidgetTester tester,
+  ) async {
+    final storage = FakeStorageService();
+    final notifications = FakeNotificationService();
+    final repository = CompanionRepository(storageService: storage);
+
+    await tester.pumpWidget(
+      MiBandNotifierApp(
+        notificationService: notifications,
+        companionRepository: repository,
+        authKeyExtractorService: const AuthKeyExtractorService(),
+        blePermissionService: const FakeBlePermissionService(),
+        bleCompanionService: const FakeBleCompanionService(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final button = find.text('Send relay smoke test');
+    await tester.fling(find.byType(ListView), const Offset(0, -1600), 1000);
+    await tester.pumpAndSettle();
+    await tester.tap(button, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(notifications.lastTitle, 'Mi Band 7 Companion');
+    expect(
+      notifications.lastBody,
+      'Relay smoke test. If your official app still mirrors notifications, the band should vibrate now.',
     );
     expect(
-      tester
-          .widget<TextField>(
-            find.widgetWithText(TextField, 'Notification body'),
-          )
-          .controller
-          ?.text,
-      'Join the meeting room now.',
+      find.textContaining('relay smoke-test notification'),
+      findsOneWidget,
     );
+  });
+
+  testWidgets('blocks the relay smoke test when notifications stay disabled', (
+    WidgetTester tester,
+  ) async {
+    final storage = FakeStorageService();
+    final notifications = FakeNotificationService(
+      notificationsEnabled: false,
+      grantOnRequest: false,
+    );
+    final repository = CompanionRepository(storageService: storage);
+
+    await tester.pumpWidget(
+      MiBandNotifierApp(
+        notificationService: notifications,
+        companionRepository: repository,
+        authKeyExtractorService: const AuthKeyExtractorService(),
+        blePermissionService: const FakeBlePermissionService(),
+        bleCompanionService: const FakeBleCompanionService(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final button = find.text('Send relay smoke test');
+    await tester.fling(find.byType(ListView), const Offset(0, -1600), 1000);
+    await tester.pumpAndSettle();
+    await tester.tap(button, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(notifications.lastTitle, isNull);
+    expect(find.textContaining('notifications are disabled'), findsOneWidget);
   });
 }
 
@@ -112,6 +150,13 @@ class FakeStorageService extends StorageService {
 }
 
 class FakeNotificationService extends NotificationService {
+  FakeNotificationService({
+    this.notificationsEnabled = true,
+    this.grantOnRequest = true,
+  });
+
+  bool notificationsEnabled;
+  final bool grantOnRequest;
   String? lastTitle;
   String? lastBody;
 
@@ -119,10 +164,13 @@ class FakeNotificationService extends NotificationService {
   Future<void> init() async {}
 
   @override
-  Future<bool> areNotificationsEnabled() async => true;
+  Future<bool> areNotificationsEnabled() async => notificationsEnabled;
 
   @override
-  Future<bool> requestPermission() async => true;
+  Future<bool> requestPermission() async {
+    notificationsEnabled = grantOnRequest;
+    return notificationsEnabled;
+  }
 
   @override
   Future<void> showNotification({
@@ -131,5 +179,40 @@ class FakeNotificationService extends NotificationService {
   }) async {
     lastTitle = title;
     lastBody = body;
+  }
+}
+
+class FakeBlePermissionService implements BlePermissionService {
+  const FakeBlePermissionService();
+
+  @override
+  Future<BlePermissionSnapshot> getSnapshot() async {
+    return const BlePermissionSnapshot(
+      bluetoothScanGranted: true,
+      bluetoothConnectGranted: true,
+      locationGranted: true,
+      notificationGranted: true,
+    );
+  }
+
+  @override
+  Future<BlePermissionSnapshot> requestRequiredPermissions() => getSnapshot();
+}
+
+class FakeBleCompanionService implements BleCompanionService {
+  const FakeBleCompanionService();
+
+  @override
+  Future<List<ScannedBand>> scanForBands({
+    Duration timeout = const Duration(seconds: 6),
+  }) async {
+    return const [
+      ScannedBand(
+        name: 'Mi Band 7',
+        id: 'AA:BB:CC:DD:EE:FF',
+        rssi: -42,
+        connectable: true,
+      ),
+    ];
   }
 }

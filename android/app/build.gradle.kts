@@ -33,6 +33,16 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
+val isWslWindowsSdkBuild =
+    System.getProperty("os.name").contains("linux", ignoreCase = true) &&
+    (localProperties.getProperty("sdk.dir")?.startsWith("/mnt/") == true)
+
 android {
     namespace = "com.cmwen.miband7notifier"
     compileSdk = flutter.compileSdkVersion
@@ -100,6 +110,15 @@ android {
     }
 
     packaging {
+        jniLibs {
+            if (isWslWindowsSdkBuild) {
+                // Some plugin-provided native libraries are being built in a WSL setup
+                // while Gradle points at a Windows-hosted NDK path that does not expose
+                // a runnable llvm-strip binary from Linux. Keeping debug symbols avoids
+                // the strip step and unblocks release APK assembly in that environment.
+                keepDebugSymbols += setOf("**/*.so")
+            }
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }

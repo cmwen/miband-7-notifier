@@ -1,27 +1,34 @@
-# Mi Band 7 Notifier
+# Mi Band 7 Companion
 
-`Mi Band 7 Notifier` is a Flutter-based Android app built from the `min-android-app-template`.
+`Mi Band 7 Companion` is a Flutter-based Android app being reworked from a notification helper into the foundation of a Gadgetbridge-style companion for Xiaomi Mi Band 7 devices.
 
-Its purpose is simple: create Android notifications that can be mirrored to a paired Xiaomi Mi Band 7 through `Mi Fitness` or `Zepp Life`.
+Today, the app focuses on the first hard parts of that journey:
+
+- tracking whether the band was paired in the correct vendor app
+- importing and normalizing a 32-byte auth key from pasted logs, rooted database output, or token-tool output
+- preparing Android BLE permissions for direct device discovery
+- scanning for likely Mi Band / Xiaomi / Huami BLE candidates
+- keeping a journal of pairing and discovery work
+- posting a relay notification smoke test while direct protocol work is still in progress
 
 ## Important limitation
 
 Mi Band 7 does **not** expose an official public SDK for direct third-party app messaging or Zepp OS app deployment.
 
-Because of that, this project uses the most practical and stable path:
+Modern Xiaomi / Huami pairing also uses a server-backed authentication key. That means:
 
-- the app posts a normal Android notification
-- Android shows it on the phone
-- Mi Fitness / Zepp Life mirrors it to the band when notification access is enabled
+- you must pair in `Zepp Life`, `Zepp`, or `Mi Fitness` first
+- you must extract or recover the auth key after vendor pairing
+- unpairing in the vendor app or factory-resetting the band invalidates that key
 
 ## Features
 
-- request Android notification permission
-- compose custom notification titles and bodies
-- save the last draft locally
-- keep a short history of recently sent notifications
-- tap a recent notification to load it back into the composer
-- show setup guidance for Mi Band 7 notification mirroring
+- vendor-app pairing baseline tracking
+- auth key extraction assistant for pasted logs / JSON / manual keys
+- BLE permission readiness checks
+- BLE scan for likely Mi Band candidates
+- persisted companion journal
+- Android notification smoke test for relay validation
 
 ## Run the app
 
@@ -45,6 +52,6 @@ flutter analyze
 
 ## Android package
 
-- App name: `Mi Band 7 Notifier`
+- App name: `Mi Band 7 Companion`
 - Dart package: `miband_7_notifier`
 - Android application ID: `com.cmwen.miband7notifier`
