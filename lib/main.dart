@@ -17,7 +17,9 @@ Future<void> main() async {
   final notificationService = NotificationService();
   await notificationService.init();
 
-  final companionRepository = CompanionRepository(storageService: storageService);
+  final companionRepository = CompanionRepository(
+    storageService: storageService,
+  );
 
   runApp(
     MiBandNotifierApp(
