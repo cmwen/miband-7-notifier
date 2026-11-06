@@ -34,7 +34,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.38.7'
+          flutter-version: '3.44.9'
           channel: 'stable'
           cache: true
       
@@ -45,9 +45,8 @@ jobs:
 
       - name: Verify Copilot MCP configuration
         run: |
-          test -f .vscode/mcp.json
-          test -f .copilot/dart-mcp-proxy.mjs
-          node --check .copilot/dart-mcp-proxy.mjs
+          node -e "JSON.parse(require('node:fs').readFileSync('.vscode/mcp.json', 'utf8'))"
+          dart mcp-server --help
       
       - name: Install Flutter dependencies
         run: flutter pub get
