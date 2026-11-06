@@ -10,9 +10,9 @@
     },
     "dart": {
       "type": "stdio",
-      "command": "node",
+      "command": "dart",
       "args": [
-        ".copilot/dart-mcp-proxy.mjs"
+        "mcp-server"
       ]
     }
   },
