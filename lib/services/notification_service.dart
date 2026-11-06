@@ -24,7 +24,7 @@ class NotificationService {
     const initializationSettings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     );
-    await _plugin.initialize(initializationSettings);
+    await _plugin.initialize(settings: initializationSettings);
 
     final androidImplementation = _plugin
         .resolvePlatformSpecificImplementation<
@@ -68,7 +68,12 @@ class NotificationService {
       ),
     );
 
-    await _plugin.show(_takeNotificationId(), title, body, details);
+    await _plugin.show(
+      id: _takeNotificationId(),
+      title: title,
+      body: body,
+      notificationDetails: details,
+    );
   }
 
   int _takeNotificationId() {
